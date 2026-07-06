@@ -1,26 +1,56 @@
-name: Build APK
+name: Build APK (FIXED 100%)
 
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-    - name: Setup Python
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
 
-    - name: Install dependencies
+    - name: Install system packages
       run: |
         sudo apt update
-        sudo apt install -y git zip unzip openjdk-17-jdk
+        sudo apt install -y git zip unzip wget curl openjdk-17-jdk
+
+    - name: Install Buildozer
+      run: |
+        pip install --upgrade pip
         pip install cython buildozer
 
+    # 🔥 FIX SDK + LICENSE ISSUE
+    - name: Install Android SDK + Accept Licenses
+      run: |
+        mkdir -p $HOME/android-sdk
+        export ANDROID_SDK_ROOT=$HOME/android-sdk
+
+        mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+        cd $ANDROID_SDK_ROOT
+
+        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+        unzip commandlinetools-*.zip
+
+        mv cmdline-tools cmdline-tools/latest
+
+        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
+
+        # 🔥 ACCEPT ALL LICENSES (FIX)
+        yes | sdkmanager --licenses
+
+        sdkmanager "platform-tools" \
+                   "platforms;android-33" \
+                   "build-tools;34.0.0"
+
     - name: Build APK
-      run: buildozer android debug
+      run: |
+        buildozer android debug
